@@ -1,0 +1,224 @@
+<div class="quizz__container">
+
+  <!-- ================= TOP HEADER / BUZZFEED BRAND ================= -->
+  <header class="quizz__header">
+    <div class="header__top-actions">
+      <!-- Category Pill -->
+      <span class="category-badge">{{ currentQuiz().category }}</span>
+
+      <!-- Right controls: Audio & Switcher -->
+      <div class="header__controls">
+        <button 
+          type="button" 
+          class="control-btn" 
+          (click)="soundService.toggleMute()" 
+          [title]="soundService.isMuted() ? 'Ativar Sons' : 'Silenciar Sons'"
+          aria-label="Controle de Som">
+          @if (soundService.isMuted()) {
+            <span class="icon">🔇</span>
+          } @else {
+            <span class="icon">🔊</span>
+          }
+        </button>
+      </div>
+    </div>
+
+    <!-- Iconic BuzzFeed Logo -->
+    <div class="buzzfeed__logo-wrapper">
+      <h1 class="buzzfeed__logo">
+        <span class="buzzfeed__text">BuzzFeed</span>
+        <span class="quiz__pill">QUIZ</span>
+      </h1>
+    </div>
+
+    <!-- Quiz Switcher Tabs -->
+    <div class="quiz__tabs">
+      @for (quiz of availableQuizzes(); track quiz.id) {
+        <button 
+          type="button"
+          class="quiz__tab" 
+          [class.quiz__tab--active]="quiz.id === currentQuiz().id"
+          (click)="switchQuiz(quiz.id)">
+          @if (quiz.id === 'heroi-ou-vilao') {
+            <span>🦸‍♂️ Herói ou Vilão</span>
+          } @else {
+            <span>💻 Dev Frontend vs Backend</span>
+          }
+        </button>
+      }
+    </div>
+
+    <!-- Main Quiz Title -->
+    <h2 class="quizz__title">{{ currentQuiz().title }}</h2>
+    <p class="quizz__subtitle">{{ currentQuiz().subtitle }}</p>
+  </header>
+
+  <!-- ================= QUIZ IN PROGRESS ================= -->
+  @if (!isFinished() && currentQuestion(); as question) {
+    <main class="quizz__content animate-fade-in">
+      
+      <!-- Progress Bar & Indicator -->
+      <div class="quizz__progress-section">
+        <div class="progress__info">
+          <span class="progress__step">Pergunta {{ questionIndex() + 1 }} de {{ totalQuestions() }}</span>
+          <span class="progress__percent">{{ progressPercent() }}% concluído</span>
+        </div>
+        <div class="progress__bar-track">
+          <div class="progress__bar-fill" [style.width.%]="progressPercent()"></div>
+        </div>
+
+        <!-- Pagination dots -->
+        <div class="progress__dots">
+          @for (q of currentQuiz().questions; track q.id; let idx = $index) {
+            <button 
+              type="button" 
+              class="dot-indicator" 
+              [class.dot-indicator--active]="idx === questionIndex()"
+              [class.dot-indicator--answered]="userAnswers()[q.id] !== undefined"
+              (click)="jumpToQuestion(idx)"
+              [title]="'Ir para questão ' + (idx + 1)">
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Question Card with Navigation Carousel Arrows -->
+      <div class="quizz__carousel-wrapper">
+        <!-- Previous Question Arrow -->
+        <button 
+          type="button" 
+          class="carousel__arrow carousel__arrow--left" 
+          (click)="prevQuestion()" 
+          [disabled]="questionIndex() === 0"
+          aria-label="Pergunta anterior"
+          title="Pergunta anterior">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+
+        <!-- Big Question Card (purple box as in screenshot) -->
+        <div class="quizz__question-card animate-slide">
+          <h3 class="question__text">{{ question.question }}</h3>
+        </div>
+
+        <!-- Next Question Arrow -->
+        <button 
+          type="button" 
+          class="carousel__arrow carousel__arrow--right" 
+          (click)="nextQuestion()" 
+          [disabled]="questionIndex() === totalQuestions() - 1 && !userAnswers()[question.id]"
+          aria-label="Próxima pergunta"
+          title="Próxima pergunta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Options Grid (Green outlined buttons) -->
+      <div class="quizz__options-grid">
+        @for (opt of question.options; track opt.id) {
+          <button 
+            type="button" 
+            class="quizz__option-btn" 
+            [class.quizz__option-btn--selected]="currentAnswer() === opt.alias"
+            (click)="onSelectOption(opt)">
+            <span class="option__text">{{ opt.name }}</span>
+            @if (currentAnswer() === opt.alias) {
+              <span class="option__check-badge">✓</span>
+            }
+          </button>
+        }
+      </div>
+
+    </main>
+  }
+
+  <!-- ================= FINAL RESULTS VIEW ================= -->
+  @if (isFinished() && finalResult(); as result) {
+    <section class="quizz__result-card animate-pop-in">
+      
+      <!-- Top banner badge -->
+      <div class="result__badge-wrapper">
+        <span class="result__archetype-badge" [style.borderColor]="result.themeColor" [style.color]="result.themeColor">
+          {{ result.badge }}
+        </span>
+      </div>
+
+      <h2 class="result__title" [style.color]="result.themeColor">
+        {{ result.title }}
+      </h2>
+
+      <p class="result__archetype-name">
+        Arquétipo: <strong>{{ result.archetype }}</strong> ({{ result.statLabel }})
+      </p>
+
+      <!-- Result Image Showcase -->
+      <div class="result__image-box" [style.boxShadow]="'0 0 35px ' + result.themeColor + '44'">
+        <img 
+          [src]="result.image" 
+          [alt]="result.title" 
+          class="result__image" />
+      </div>
+
+      <!-- Description / Flavor text -->
+      <div class="result__description-card">
+        <p class="result__description">{{ result.description }}</p>
+      </div>
+
+      <!-- Stats Ratio Bar -->
+      <div class="result__stats-section">
+        <h4 class="stats__heading">Distribuição das suas respostas:</h4>
+        <div class="stats__bars">
+          <div class="stat__item">
+            <div class="stat__label">
+              <span>{{ currentQuiz().id === 'heroi-ou-vilao' ? 'Lado das Trevas (Vilão)' : 'Foco Frontend' }}</span>
+              <strong class="stat__val">{{ stats().percentA }}%</strong>
+            </div>
+            <div class="stat__bar-bg">
+              <div class="stat__bar-fill stat__bar-fill--a" [style.width.%]="stats().percentA"></div>
+            </div>
+          </div>
+
+          <div class="stat__item">
+            <div class="stat__label">
+              <span>{{ currentQuiz().id === 'heroi-ou-vilao' ? 'Lado da Luz (Herói)' : 'Foco Backend' }}</span>
+              <strong class="stat__val">{{ stats().percentB }}%</strong>
+            </div>
+            <div class="stat__bar-bg">
+              <div class="stat__bar-fill stat__bar-fill--b" [style.width.%]="stats().percentB"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="result__actions">
+        <button type="button" class="action-btn action-btn--restart" (click)="restartQuiz()">
+          <span class="btn-icon">↺</span>
+          <span>Refazer o Teste</span>
+        </button>
+
+        <button type="button" class="action-btn action-btn--share" (click)="shareResult()">
+          <span class="btn-icon">🔗</span>
+          <span>Compartilhar Resultado</span>
+        </button>
+      </div>
+
+    </section>
+  }
+
+  <!-- Toast message notification -->
+  @if (toastMessage()) {
+    <div class="quizz__toast animate-pop-in" role="alert">
+      <span>{{ toastMessage() }}</span>
+    </div>
+  }
+
+  <!-- Footer -->
+  <footer class="quizz__footer">
+    <p>Projeto Inspirado no Clone do <strong>BuzzFeed</strong> da Digital Innovation One (DIO).</p>
+  </footer>
+
+</div>
